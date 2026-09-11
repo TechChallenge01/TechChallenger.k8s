@@ -65,7 +65,7 @@ flowchart TB
 
 ```powershell
 cd terraform
-terraform init
+terraform init -backend-config="bucket=<BUCKET_DO_STATE>"
 terraform plan -out tfplan
 terraform apply "tfplan"       # ~12-15 min (o EKS domina o tempo)
 terraform output
@@ -91,16 +91,20 @@ Ordem **inversa** à de aplicação — quem depende sai primeiro:
 # 2) TechChallenger.db   (usa a VPC/EKS via data source)
 # 3) este repo (TechChallenger.k8s) por último:
 cd terraform
+terraform init -backend-config="bucket=<BUCKET_DO_STATE>"
 terraform destroy
 ```
 
 ## Estado do Terraform
 
-Hoje o state é **local** (arquivo `terraform.tfstate`, ignorado pelo Git). Para trabalho em equipe, migrar para backend S3 + trava DynamoDB — mesmo padrão já adotado no repo `TechChallenger.auth`.
+Backend **S3** (bucket compartilhado com os demais repos do Tech Challenge, key `techchallenge-k8s/terraform.tfstate`, versionamento ligado). O bucket é passado em tempo de `init` (`-backend-config="bucket=..."`), nunca fixo no código — nem local nem na esteira.
 
 ## CI/CD
 
-**Ainda não implementado.** A rubrica pede pipeline com deploy automático das branches de homologação e produção; hoje o `terraform apply` é manual (passos acima). Próximo passo: workflow GitHub Actions rodando `fmt`/`validate` em PR e `apply` em push nas branches protegidas, com as credenciais do Learner Lab como secrets (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`).
+- **`ci.yml`** — em todo PR para `main`: `terraform fmt` (advisório) + `terraform validate` (`-backend=false`, não precisa de credenciais AWS).
+- **`cd.yml`** — em todo push na `main` (só entra via PR, branch protegida) ou disparo manual: autentica com as credenciais temporárias do Learner Lab e roda `terraform apply`. Único ambiente — o orçamento do AWS Academy não comporta um segundo cluster/VPC só para homologação (mesmo racional documentado no `cd.yml` do `TechChallenge`).
+
+Secrets necessários no repositório (Settings → Secrets and variables → Actions): `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` (temporários do Learner Lab, renovar a cada sessão) e `TF_STATE_BUCKET` (nome do bucket S3 do state).
 
 ## Notas
 

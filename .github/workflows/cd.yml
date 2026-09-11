@@ -1,0 +1,45 @@
+name: CD
+
+# Deploy automatico em push na main -- unico ambiente para a infra base
+# (VPC + EKS + ECR): o orcamento do AWS Academy nao comporta um segundo
+# cluster/VPC so para homologacao. Branch main protegida: entra so via PR.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Credenciais AWS Academy (temporarias)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -input=false -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve -input=false
+          echo "### Outputs" >> "$GITHUB_STEP_SUMMARY"
+          terraform output -json | jq -r 'to_entries[] | "- **\(.key)**: \(.value.value)"' >> "$GITHUB_STEP_SUMMARY"
