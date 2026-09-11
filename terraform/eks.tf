@@ -27,6 +27,9 @@ resource "aws_eks_node_group" "nodes" {
     min_size     = 1
   }
 
+  # AL2 (padrao antigo) nao tem mais AMI publicada para versoes recentes do EKS
+  # -> "Requested AMI for this version is not supported". AL2023 e o padrao atual.
+  ami_type       = "AL2023_x86_64_STANDARD"
   instance_types = var.node_instance_types
 
   tags = {
