@@ -47,42 +47,7 @@ variable "public_subnet_cidrs" {
 }
 
 variable "private_subnet_cidrs" {
-  description = "CIDRs das subnets privadas (RDS SQL Server)"
+  description = "CIDRs das subnets privadas (reservadas para o RDS, provisionado no repo TechChallenger.db)"
   type        = list(string)
   default     = ["10.0.11.0/24", "10.0.12.0/24"]
-}
-
-variable "db_username" {
-  description = "Usuario master do RDS. NAO pode ser 'sa', 'admin' ou outra palavra reservada do SQL Server"
-  type        = string
-  default     = "dbadmin"
-}
-
-variable "db_password" {
-  description = "Senha master do RDS. Defina via TF_VAR_db_password ou -var, nunca em texto plano no repositorio"
-  type        = string
-  sensitive   = true
-
-  validation {
-    condition     = length(var.db_password) >= 8 && length(var.db_password) <= 128
-    error_message = "A senha do SQL Server deve ter entre 8 e 128 caracteres."
-  }
-}
-
-variable "db_instance_class" {
-  description = "Classe da instancia do RDS"
-  type        = string
-  default     = "db.t3.small"
-}
-
-variable "db_engine_version" {
-  description = "Versao do engine SQL Server Express"
-  type        = string
-  default     = "15.00"
-}
-
-variable "db_allocated_storage" {
-  description = "Armazenamento alocado (GB) para o RDS"
-  type        = number
-  default     = 20
 }

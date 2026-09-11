@@ -68,31 +68,6 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# RDS SQL Server exige no minimo 2 subnets em AZs diferentes, mesmo com uma so instancia
-resource "aws_db_subnet_group" "sqlserver" {
-  name       = "${var.project_name}-db-subnet-group"
-  subnet_ids = aws_subnet.private[*].id
-
-  tags = {
-    Name = "${var.project_name}-db-subnet-group"
-  }
-}
-
-# Subnet group separado (nao edita o de cima) para permitir acesso externo temporario via SSMS.
-# O RDS nao deixa remover uma subnet "em uso" de um subnet group existente, entao a forma
-# correta de mover a instancia de rede e apontar para um subnet group NOVO, e nao editar
-# o subnet_ids do subnet group atual.
-# ATENCAO: quando terminar de usar o SSMS, volte sqlserver.tf para usar
-# aws_db_subnet_group.sqlserver (privado) em vez deste.
-resource "aws_db_subnet_group" "sqlserver_public" {
-  name       = "${var.project_name}-db-subnet-group-public"
-  subnet_ids = aws_subnet.public[*].id
-
-  tags = {
-    Name = "${var.project_name}-db-subnet-group-public"
-  }
-}
-
 # Security group dos nodes do EKS
 resource "aws_security_group" "eks_nodes" {
   name_prefix = "${var.project_name}-eks-nodes-"
@@ -110,42 +85,6 @@ resource "aws_security_group" "eks_nodes" {
   }
 }
 
-# Security group do RDS: so aceita conexao SQL Server (1433) vinda dos nodes do EKS
-resource "aws_security_group" "sqlserver" {
-  name_prefix = "${var.project_name}-sqlserver-"
-  vpc_id      = aws_vpc.main.id
-
-  # ATENCAO: aws_security_group.eks_nodes so fica anexado as ENIs do control plane
-  # (vpc_config.security_group_ids em eks.tf), NAO aos nos EC2 do node group — o
-  # aws_eks_node_group.nodes nao usa launch_template, entao a AWS anexa aos nos o
-  # security group "cluster" que ela mesma cria (cluster_security_group_id).
-  # Por isso a origem correta aqui e o cluster_security_group_id, nao o eks_nodes.
-  ingress {
-    description     = "SQL Server access from EKS nodes"
-    from_port       = 1433
-    to_port         = 1433
-    protocol        = "tcp"
-    security_groups = [aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id]
-  }
-
-  # ATENCAO: regra temporaria para acesso via SSMS. Remova quando terminar de debugar.
-  # Se seu IP publico mudar (rede residencial costuma ser dinamico), atualize aqui.
-  ingress {
-    description = "Acesso temporario via SSMS"
-    from_port   = 1433
-    to_port     = 1433
-    protocol    = "tcp"
-    cidr_blocks = ["179.111.170.52/32"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-sqlserver-sg"
-  }
-}
+# O RDS (subnet groups + security group + instancia) e provisionado no repo
+# TechChallenger.db, que acha esta VPC e o security group do cluster (para liberar
+# acesso do EKS ao banco) via `data source`, por tag/nome -- sem acoplar os states.
