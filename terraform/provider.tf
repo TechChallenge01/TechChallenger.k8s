@@ -15,6 +15,12 @@ terraform {
       version = "~> 2.17"
     }
   }
+
+  backend "s3" {
+    key     = "techchallenge-k8s/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
 }
 
 provider "aws" {
