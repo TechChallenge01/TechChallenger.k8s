@@ -109,3 +109,4 @@ Secrets necessários no repositório (Settings → Secrets and variables → Act
 ## Notas
 
 - Repositório de infraestrutura: não expõe API, portanto sem Swagger/Postman. Ver os READMEs de [`TechChallenge`](https://github.com/TechChallenge01/TechChallenge) e [`TechChallenger.auth`](https://github.com/TechChallenge01/TechChallenger.auth).
+- Documentação arquitetural completa (diagrama de componentes, sequência, modelo ER, RFCs, ADRs — inclusive o [ADR sobre ambiente único de infraestrutura](https://github.com/TechChallenge01/TechChallenge/blob/main/docs/architecture/adrs/ADR-005-ambiente-unico-homolog-prod.md)) em [`docs/architecture/`](https://github.com/TechChallenge01/TechChallenge/tree/main/docs/architecture), no repositório `TechChallenge`.
